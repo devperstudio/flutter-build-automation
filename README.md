@@ -51,13 +51,84 @@ nano .env
 
 ## Manual Run
 
-```bash
-# Combined (both poller and builder in one process)
-python main.py
+```base
+nano /etc/systemd/system/flutter-build-automation.service
+```
+```base
+systemctl daemon-reload
+```
+```base
+# Boot এ auto-start enable করুন
+systemctl enable flutter-build-automation
+```
+```base
+# Service start করুন
+systemctl start flutter-build-automation
+```
+```base
+systemctl status flutter-build-automation
+```
+```base
+# Stop
+systemctl stop flutter-build-automation
 
-# Or as separate processes
-python -m workers.poller   # Terminal 1
-python -m workers.builder  # Terminal 2
+# Start
+systemctl start flutter-build-automation
+
+# Restart (code update করলে)
+systemctl restart flutter-build-automation
+
+# Disable auto-start
+systemctl disable flutter-build-automation
+
+# Enable auto-start
+systemctl enable flutter-build-automation
+```
+
+```bash
+[Unit]
+Description=Flutter APK Build Automation Service
+After=network-online.target redis-server.service
+Wants=network-online.target
+Requires=redis-server.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/builder/flutter-build-automation
+
+Environment="PATH=/home/builder/flutter-build-automation/venv/bin:/opt/flutter/bin:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64"
+Environment="ANDROID_HOME=/opt/android-sdk"
+Environment="ANDROID_SDK_ROOT=/opt/android-sdk"
+Environment="PYTHONUNBUFFERED=1"
+
+ExecStart=/home/builder/flutter-build-automation/venv/bin/python /home/builder/flutter-build-automation/main.py
+
+# === Auto-restart Configuration ===
+Restart=always
+RestartSec=10
+StartLimitIntervalSec=600
+StartLimitBurst=20
+
+# === Resource Limits ===
+MemoryMax=6G
+MemoryHigh=5G
+TasksMax=512
+
+# === Process Management ===
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=60
+SendSIGKILL=yes
+FinalKillSignal=SIGKILL
+
+# === Logging ===
+StandardOutput=append:/home/builder/flutter-build-automation/logs/service.log
+StandardError=append:/home/builder/flutter-build-automation/logs/service-error.log
+
+[Install]
+WantedBy=multi-user.target
 ```
 
 ## Configuration
